@@ -15,6 +15,13 @@ class User(Base):
     name: Mapped[Optional[str]]
 
 
+class OneTimeCode(Base):
+    __tablename__ = "one_time_codes"
+
+    phone_number: Mapped[str] = mapped_column(primary_key=True, index=True, unique=True)
+    code: Mapped[str] = mapped_column(primary_key=True, index=True)
+
+
 class Article(Base):
     __tablename__ = "articles"
 
