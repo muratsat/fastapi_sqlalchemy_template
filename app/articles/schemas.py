@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-Status = Literal["archived", "scheduled", "published"]
+Status = Literal["scheduled", "published", "archived"]
 
 
 class ArticleBase(BaseModel):

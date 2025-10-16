@@ -27,12 +27,20 @@ async def get_articles(
     status: Status, limit=10, offset=0, db: AsyncSession = Depends(get_db)
 ):
     now = datetime.now()
-    print(now)
 
     if status == "scheduled":
-        query = select(models.Article).where(models.Article.scheduled_date > now)
+        query = select(models.Article).where(
+            and_(
+                models.Article.scheduled_date != None,
+                models.Article.scheduled_date > now,
+            )
+        )
     elif status == "archived":
-        query = select(models.Article).where(models.Article.archived_date < now)
+        query = select(models.Article).where(
+            and_(
+                models.Article.archived_date != None, models.Article.archived_date < now
+            )
+        )
     else:
         query = select(models.Article).where(
             and_(
