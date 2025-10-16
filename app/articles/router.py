@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db, models
 
-from .schemas import Article, ArticleCreate, Status
+from .schemas import Article, ArticleCreate, ArticleUpdate, Status
 
 router = APIRouter()
 
@@ -51,3 +51,34 @@ async def get_articles(
     articles = result.scalars().all()
 
     return articles
+
+
+@router.get("/{id}", response_model=Article)
+async def get_article(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Article).where(models.Article.id == id))
+
+    article = result.scalar_one_or_none()
+
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    return article
+
+
+@router.patch("/{id}", response_model=Article)
+async def update_article(
+    id: int, body: ArticleUpdate, db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(models.Article).where(models.Article.id == id))
+
+    article = result.scalar_one_or_none()
+
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    article.archived_date = datetime.now() if body.archive else None
+
+    await db.commit()
+    await db.refresh(article)
+
+    return article

@@ -18,6 +18,10 @@ class ArticleCreate(ArticleBase):
     pass
 
 
+class ArticleUpdate(BaseModel):
+    archive: bool
+
+
 class Article(ArticleBase):
     id: int
 
