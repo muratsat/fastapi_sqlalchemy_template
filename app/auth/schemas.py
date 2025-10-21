@@ -10,6 +10,13 @@ class VerifyCodeInput(OneTimeCodeInput):
     code: str
 
 
-class Token(BaseModel):
+class RefreshTokenSchema(BaseModel):
+    refresh_token: str
+
+
+class AccessTokenSchema(BaseModel):
     access_token: str
-    token_type: str
+
+
+class TokenPair(RefreshTokenSchema, AccessTokenSchema):
+    pass
