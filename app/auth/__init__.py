@@ -122,6 +122,9 @@ async def get_user(
     except jwt.InvalidTokenError:
         raise CREDENTIALS_EXCEPTION
 
+    if payload.get("type") != "access":
+        raise CREDENTIALS_EXCEPTION
+
     user = await db.execute(select(models.User).where(models.User.id == user_id))
     user = user.scalar_one_or_none()
 

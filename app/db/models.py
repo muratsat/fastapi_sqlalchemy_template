@@ -21,6 +21,8 @@ class OneTimeCode(Base):
     phone_number: Mapped[str] = mapped_column(primary_key=True, index=True, unique=True)
     code: Mapped[str] = mapped_column()
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(default=0)
+    used: Mapped[bool] = mapped_column(default=False)
 
 
 class RefreshToken(Base):
@@ -28,7 +30,7 @@ class RefreshToken(Base):
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True, unique=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    token_family: Mapped[str] = mapped_column(primary_key=True, index=True)
+    token_family: Mapped[str] = mapped_column(index=True)
     parent_token_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("refresh_tokens.id"), nullable=True
     )
