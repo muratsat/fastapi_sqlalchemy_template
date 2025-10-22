@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey
@@ -19,13 +19,14 @@ class OneTimeCode(Base):
     __tablename__ = "one_time_codes"
 
     phone_number: Mapped[str] = mapped_column(primary_key=True, index=True, unique=True)
-    code: Mapped[str] = mapped_column(primary_key=True, index=True)
+    code: Mapped[str] = mapped_column()
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
-    id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    id: Mapped[str] = mapped_column(primary_key=True, index=True, unique=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     token_family: Mapped[str] = mapped_column(primary_key=True, index=True)
     parent_token_id: Mapped[Optional[str]] = mapped_column(

@@ -1,6 +1,7 @@
+import hashlib
 import random
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import insert, select
@@ -13,15 +14,19 @@ from app.auth.schemas import (
     TokenPair,
     VerifyCodeInput,
 )
-from app.config import env
 from app.db import get_db, models
 
 router = APIRouter()
 
 
+async def send_otp(phone_number: str, code: str):
+    # TODO: Send OTP to user
+    print(phone_number, code)
+    pass
+
+
 @router.post("/request-otp")
 async def request_otp(otp_input: OneTimeCodeInput, db: AsyncSession = Depends(get_db)):
-    random_code = "".join([str(random.randint(0, 9)) for _ in range(6)])
     db_code = (
         await db.execute(
             select(models.OneTimeCode).where(
@@ -30,17 +35,26 @@ async def request_otp(otp_input: OneTimeCodeInput, db: AsyncSession = Depends(ge
         )
     ).scalar_one_or_none()
 
+    random_code = "".join([str(random.randint(0, 9)) for _ in range(6)])
+    await send_otp(otp_input.phone_number, random_code)
+    random_code = hashlib.sha256(random_code.encode()).hexdigest()
+
     if db_code is None:
         db_code = (
             await db.execute(
                 insert(models.OneTimeCode)
-                .values(phone_number=otp_input.phone_number, code=random_code)
+                .values(
+                    phone_number=otp_input.phone_number,
+                    code=random_code,
+                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                )
                 .returning(models.OneTimeCode)
             )
         ).scalar_one()
         db.add(db_code)
 
     db_code.code = random_code
+    db_code.expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
 
     await db.commit()
     await db.refresh(db_code)
@@ -63,8 +77,9 @@ async def verify_otp(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Code is invalid"
         )
 
-    verified = db_code.code == otp_input.code
-    verified = verified or env.DEBUG
+    verified = db_code.code == hashlib.sha256(
+        otp_input.code.encode()
+    ).hexdigest() and db_code.expires_at > datetime.now(timezone.utc)
 
     if not verified:
         raise HTTPException(
