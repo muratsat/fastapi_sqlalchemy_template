@@ -10,6 +10,14 @@ services:
     networks:
       - backend
 
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - backend
+
   app:
     build: .
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --timeout-keep-alive 300 --timeout-graceful-shutdown 30
@@ -18,13 +26,17 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgresql+asyncpg://myuser:mypassword@db:5432/mydb
+      - DATABASE_URL=postgresql+asyncpg://myuser:mypassword@db:5432/mydb
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env
     restart: unless-stopped
+    networks:
+      - backend
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   backend:

@@ -1,10 +1,23 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.db.redis_cilent import close_redis, init_redis
 from app.router import router
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Startup")
+    await init_redis()
+    yield
+    print("Shutdown")
+    await close_redis()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 # Global exception handler for SQLAlchemy errors

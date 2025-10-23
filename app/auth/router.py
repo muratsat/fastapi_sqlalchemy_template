@@ -4,12 +4,12 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import rate_limiter
 from app.auth import create_token_pair, get_user, rotate_refresh_token
 from app.auth.schemas import (
     OneTimeCodeInput,
@@ -42,7 +42,10 @@ def hash_otp(otp: str) -> str:
 
 
 @router.post("/request-otp")
-async def request_otp(otp_input: OneTimeCodeInput, db: AsyncSession = Depends(get_db)):
+async def request_otp(
+    request: Request, otp_input: OneTimeCodeInput, db: AsyncSession = Depends(get_db)
+):
+    await rate_limiter.rate_limit(request, max_requests=5, timeframe_seconds=10)
     otp = random_otp()
 
     db_code = await db.execute(
@@ -82,8 +85,9 @@ async def request_otp(otp_input: OneTimeCodeInput, db: AsyncSession = Depends(ge
 
 @router.post("/token")
 async def verify_otp(
-    otp_input: VerifyCodeInput, db: AsyncSession = Depends(get_db)
+    request, otp_input: VerifyCodeInput, db: AsyncSession = Depends(get_db)
 ) -> TokenPair:
+    await rate_limiter.rate_limit(request, max_requests=5, timeframe_seconds=10)
     db_code = (
         await db.execute(
             select(models.OneTimeCode).where(
@@ -94,7 +98,9 @@ async def verify_otp(
 
     # Check if code exists and is not expired
     if db_code is None or db_code.expires_at <= datetime.now(timezone.utc):
-        logger.warning(f"Invalid or expired OTP attempt for phone: {otp_input.phone_number}")
+        logger.warning(
+            f"Invalid or expired OTP attempt for phone: {otp_input.phone_number}"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Code is invalid"
         )
